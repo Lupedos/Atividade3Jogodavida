@@ -153,9 +153,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   computeShader: {fileID: 0}
-  ncubes: 10
+  ncubes: 100
   cubePrefab: {fileID: 7538229834083031575, guid: 182cd16b3a08bb244a1cacff8397b6e7, type: 3}
   foi: 0
+  isRunning: 0
+  useGPU: 0
 --- !u!4 &487296565
 Transform:
   m_ObjectHideFlags: 0
