@@ -316,9 +316,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf4bbcac0164870449b0f39b29e4b5d8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  gameOfLifeComputeShader: {fileID: 7200000, guid: 98a897676310aa34089457c4f229cadb, type: 3}
-  displayImage: {fileID: 1450485437}
-  cpuToggle: {fileID: 678355786}
 --- !u!114 &487296567
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -332,7 +329,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   computeShader: {fileID: 7200000, guid: 67593a51eef331c4c8324c57d6c61231, type: 3}
-  ncubes: 100
+  ncubes: 10
   cubePrefab: {fileID: 7538229834083031575, guid: 182cd16b3a08bb244a1cacff8397b6e7, type: 3}
   foi: 0
   isRunning: 0
@@ -390,7 +387,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 13.088687
+  orthographic size: 15.493993
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
