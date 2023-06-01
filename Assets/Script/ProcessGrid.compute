@@ -1,0 +1,51 @@
+#pragma kernel ProcessGrid
+
+
+    struct Cube
+    {
+        float2 position;
+        float4 color;
+        int isAlive;
+        int aliveNeighbors;
+    };
+
+    RWStructuredBuffer<Cube> cubes; 
+[numthreads(64, 1, 1)]
+void ProcessGrid(uint3 id : SV_DispatchThreadID)
+{
+    Cube obj = cubes[id.x];
+
+    if (obj.isAlive == 1 && (obj.aliveNeighbors < 2 || obj.aliveNeighbors > 3))
+    {
+        obj.isAlive = 0;
+        obj.color = float4(0.0, 0.0, 0.0, 1.0);              
+    }
+    else if (obj.isAlive == 0 && obj.aliveNeighbors == 3)
+    {
+        obj.isAlive = 1;
+        obj.color = float4(1.0, 0.0, 0.0, 1.0);
+    }
+    cubes[id.x] = obj;
+   
+
+
+    //uint index = id.x;
+    //Cube[] newCube = new Cube[cubes.Length];
+    //int index = 0;
+    //foreach(Cube cb in cubes )
+    //{
+    //    Cube c = new Cube()
+    //    c.color
+    //    newCube[index].
+
+    //}
+    //// // Acesse os dados do buffer
+    //Cube cube = cubes[index];
+    //cube.color = float4(0.0f, 0.0f, 1.0f, 1.0f);
+    //// // Realize as operações necessárias nos dados
+
+    //// // Atualize os dados de volta no buffer
+    //cubes[index] = cube;
+
+}
+     

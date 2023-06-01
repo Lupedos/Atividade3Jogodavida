@@ -1,14 +1,17 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using System;
+using System.Runtime.InteropServices;
 public class Nome : MonoBehaviour
 {
     struct Cube
     {
         public Vector2 position;
         public Color color;
-        public bool isAlive;
+        public int isAlive;
+        public int aliveNeighbors;
+        
     }
 
     public ComputeShader computeShader;
@@ -18,8 +21,15 @@ public class Nome : MonoBehaviour
     GameObject[] gameObjects;
 
     public bool foi = false;
-    public bool isRunning = false; // Indica se o jogo está em execução
-    public bool useGPU = false; // Indica se a execução é na GPU
+    public bool isRunning = false;
+    public bool useGPU = false;
+
+    private int kernelIndex;
+
+    private void Start()
+    {
+        kernelIndex = computeShader.FindKernel("ProcessGrid");
+    }
 
     private void Update()
     {
@@ -38,17 +48,14 @@ public class Nome : MonoBehaviour
         if (Input.GetMouseButtonDown(0))
         {
             RaycastHit2D hit = Physics2D.Raycast(Camera.main.ScreenToWorldPoint(Input.mousePosition), Vector2.zero);
-            //Debug.Log("1");
             if (hit.collider != null)
             {
-                //Debug.Log("2");
                 GameObject clickedObject = hit.collider.gameObject;
                 int index = System.Array.IndexOf(gameObjects, clickedObject);
                 if (index != -1)
                 {
-                    data[index].isAlive = !data[index].isAlive;
+                    data[index].isAlive = 1 - data[index].isAlive;
                     UpdateCubeColor(index);
-                    //Debug.Log("aaaa");
                 }
             }
         }
@@ -99,12 +106,12 @@ public class Nome : MonoBehaviour
                 float offsetY = (-ncubes / 2 + j);
 
                 GameObject go = GameObject.Instantiate(cubePrefab, new Vector2(offsetX * 1.1f, offsetY * 1.1f), Quaternion.identity);
-                
 
                 data[i * ncubes + j] = new Cube();
                 data[i * ncubes + j].position = go.transform.position;
-                data[i * ncubes + j].isAlive = false;
+                data[i * ncubes + j].isAlive = 0;
                 data[i * ncubes + j].color = Color.black;
+                
 
                 gameObjects[i * ncubes + j] = go;
                 int index = System.Array.IndexOf(gameObjects, go);
@@ -122,18 +129,18 @@ public class Nome : MonoBehaviour
             for (int j = 0; j < ncubes; j++)
             {
                 int index = i * ncubes + j;
-                bool isAlive = data[index].isAlive;
+                int isAlive = data[index].isAlive;
 
                 int aliveNeighbors = CountAliveNeighbors(i, j);
 
-                if (isAlive && (aliveNeighbors < 2 || aliveNeighbors > 3))
+                if (isAlive == 1 && (aliveNeighbors < 2 || aliveNeighbors > 3))
                 {
-                    isAlive = false;
+                    isAlive = 0;
                     UpdateCubeColor(index, Color.black);
                 }
-                else if (!isAlive && aliveNeighbors == 3)
+                else if (isAlive == 0 && aliveNeighbors == 3)
                 {
-                    isAlive = true;
+                    isAlive = 1;
                     UpdateCubeColor(index, Color.red);
                 }
 
@@ -155,7 +162,7 @@ public class Nome : MonoBehaviour
         {
             for (int j = y - 1; j <= y + 1; j++)
             {
-                if (i >= 0 && i < ncubes && j >= 0 && j < ncubes && !(i == x && j == y) && data[i * ncubes + j].isAlive)
+                if (i >= 0 && i < ncubes && j >= 0 && j < ncubes && !(i == x && j == y) && data[i * ncubes + j].isAlive == 1)
                 {
                     count++;
                 }
@@ -167,16 +174,46 @@ public class Nome : MonoBehaviour
 
     private void ProcessGPU()
     {
-        int totalBytes = sizeof(float) * 3 + sizeof(float) * 4 + sizeof(bool);
+        try
+        {
+            int cubeSize = Marshal.SizeOf(new Cube());   // Tamanho da estrutura Cube
+            // Calcula o tamanho do buffer com base no tamanho da estrutura Cube
+            int bufferSize = Mathf.CeilToInt((float)data.Length * cubeSize);
+            
+            ComputeBuffer cb = new ComputeBuffer(ncubes * ncubes, cubeSize);
 
-        ComputeBuffer cb = new ComputeBuffer(data.Length, totalBytes);
-        cb.SetData(data);
-        computeShader.SetBuffer(0, "cubes", cb);
+            for (int i = 0; i < ncubes; i++)
+            {
+                for (int j = 0; j < ncubes; j++)
+                {
+                    int index = i * ncubes + j;
+                    int aliveNeighbors = CountAliveNeighbors(i, j);
+                    data[index].aliveNeighbors = aliveNeighbors;
+                }
+            }
 
-        computeShader.Dispatch(0, data.Length / 10, 1, 1);
-
-        cb.GetData(data);
-        cb.Release();
+            cb.SetData(data);
+            
+            computeShader.SetBuffer(kernelIndex, "cubes", cb);
+            
+            int numGroups = Mathf.CeilToInt((float)data.Length / 16f);
+      
+            computeShader.Dispatch(kernelIndex, numGroups, 1, 1);            
+            cb.GetData(data);
+            for (int i = 0; i < bufferSize; i++)
+            {
+                gameObjects[i].GetComponent<SpriteRenderer>().material.SetColor("_Color", data[i].color);
+                //// Update the corresponding object in the scene with the modified color
+                //GameObject obj = data[i]; /* Get the GameObject corresponding to the objectDataArray[i] */;
+                //Renderer renderer = obj.GetComponent<Renderer>();
+                //renderer.material.color = data[i].color;
+            }
+            cb.Release();
+        }
+        catch (Exception ex )
+        {
+            Debug.Log("Erro do metodo ProcessGPU: " + ex.Message);
+        }
     }
 
     private void UpdateCubeColor(int index, Color color)
@@ -187,7 +224,7 @@ public class Nome : MonoBehaviour
 
     private void UpdateCubeColor(int index)
     {
-        Color color = data[index].isAlive ? Color.red : Color.black;
+        Color color = data[index].isAlive == 1 ? Color.red : Color.black;
         gameObjects[index].GetComponent<SpriteRenderer>().material.SetColor("_Color", color);
         data[index].color = color;
     }

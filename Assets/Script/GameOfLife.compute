@@ -1,0 +1,48 @@
+#pragma kernel GameOfLife
+
+RWTexture2D<float4> Current;  // Textura de entrada (atual)
+RWTexture2D<float4> Result;  // Textura de saída (atualizada)
+
+[numthreads(8, 8, 1)]
+void GameOfLife(uint3 id : SV_DispatchThreadID)
+{
+    int2 size = int2(100, 100);  // Obtém as dimensões da textura
+    int2 coords = int2(id.xy);  // Coordenadas do thread atual
+
+    float4 currentState = Current[coords];  // Estado atual da célula
+    float4 resultState = float4(0, 0, 0, 1);  // Estado resultante da célula
+
+    int aliveNeighbors = 0;  // Contador de vizinhos vivos
+
+    // Loop para contar os vizinhos vivos
+    for (int i = -1; i <= 1; i++)
+    {
+        for (int j = -1; j <= 1; j++)
+        {
+            if (i == 0 && j == 0)
+                continue;  // Ignora a própria célula
+
+            int2 neighborCoords = coords + int2(i, j);  // Coordenadas do vizinho
+            float4 neighborState = Current[neighborCoords];  // Estado do vizinho
+
+            if (neighborState.r > 0)
+                aliveNeighbors++;  // Incrementa o contador se o vizinho estiver vivo
+        }
+    }
+
+    // Aplica as regras do jogo da vida para atualizar o estado da célula
+    if (currentState.r > 0)
+    {
+        if (aliveNeighbors < 2 || aliveNeighbors > 3)
+            resultState = float4(0, 0, 0, 1);  // Regra 2 e 3: morte por isolamento ou superpopulação
+        else
+            resultState = float4(1, 1, 1, 1);  // Regra 4: permanece viva
+    }
+    else
+    {
+        if (aliveNeighbors == 3)
+            resultState = float4(1, 1, 1, 1);  // Regra 1: nascimento
+    }
+
+    Result[coords] = resultState;  // Grava o estado resultante na textura de saída
+}

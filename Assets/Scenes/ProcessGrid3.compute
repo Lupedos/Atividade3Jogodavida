@@ -1,0 +1,24 @@
+#pragma kernel ProcessGrid3
+
+struct Cube
+{
+    float3 position;
+    float4 color;
+    int isAlive;
+};
+
+RWStructuredBuffer<Cube> cubes;
+
+[numthreads(16, 1, 1)]
+void ProcessGrid3(uint3 id : SV_DispatchThreadID)
+{
+    uint index = id.x;
+
+    // Access and modify the data of the 'Cube' struct as needed
+    Cube cube = cubes[index];
+
+    // Perform the necessary operations with the 'cube' variable
+
+    // Update the data back to the buffer
+    cubes[index] = cube;
+}
